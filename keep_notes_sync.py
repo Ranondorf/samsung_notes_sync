@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Put Samsung notes workout plans into a csv.
+"""Puts workout plans into a CSV file. Samsung notes and Googles Keep Notes
 """
 
 import os
@@ -59,6 +59,46 @@ def rename_files(root_path: str, output_folder: str) -> None:
             # This copies the modified txt files into the destination
             shutil.copy2(os.path.join(root_path, file),os.path.join(output_folder, f'{date}_{day}_{weight}kg.txt'))
             
+def create_unique_files(input_file_name: str, output_folder: str) -> None:
+    """Takes a Google Keep Notes export text file with training data and splits it into smaller files.
+    This is done to take advantage of a prewritten output function for a different program."""
+    try:
+        with open(input_file_name, 'r') as input_handle:
+            lines = input_handle.readlines()
+
+        output_dict = {}
+        for line in lines:
+            #Need to add checking here
+            if "/" in line:
+                date = line.rstrip("\n").split("/")
+                if len(date[0]) == 1:
+                    date[0] = "0" + date[0]
+                if len(date[1]) == 1:
+                    date[1] = "0" + date[1]
+
+
+                output_file_name = date[2] + date[1] + date[0] + "_"
+            elif line.rstrip("\n").lower() in ["sun", "mon", "tue", "wed", "thu", "fri", "sat"]:
+                output_file_name += line.rstrip("\n") + "_"
+            elif line[0:2].isdigit() and line[2:4].lower() == "kg" and len(line) == 5:
+                output_file_name += line.rstrip("\n")
+                output_dict[output_file_name] = ""
+            elif line == "\n":
+                pass
+            else:
+                output_dict[output_file_name] += line
+        
+        # This creates output files in the format YYMMDD_<3 letter day code>_<2 digit bodyweight>kg.txt
+        for key in output_dict.keys():
+            with open(os.path.join(output_folder, f"{key}.txt"),"w") as file_handle:
+                file_handle.writelines(output_dict[key])
+
+       
+
+
+    except Exception as e:
+        print(f'File open failed in create_unique_files()  with message: {e}')
+        sys.exit(1)
 
 
 def create_output_csv(output_folder: str, output_file: str):
@@ -90,7 +130,9 @@ def main():
     output_folder = sys.argv[2] # Destination path to where all output files including the CSV goes
 
     print("\n\nEntering Phase 1\n\n")
-    rename_files(root_path, output_folder)    
+    create_unique_files(root_path, output_folder)
+
+
     print("\n\nEntering Phase 2\n\n")
     create_output_csv(output_folder, 'output.csv')
     print("Finished")
